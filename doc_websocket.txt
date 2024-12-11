@@ -1,0 +1,160 @@
+
+https://www.youtube.com/watch?v=YCK8JwDJI5s&list=PLQDioScEMUhl_vDV7BcYTUdTU4Jz8g58X&index=2
+
+
+composer require beyondcode/laravel-websockets
+php artisan vendor:publish --provider="BeyondCode\LaravelWebSockets\WebSocketsServiceProvider" --tag="migrations"
+=====0000_00_00_000000_rename_statistics_counters============
+  Schema::table('websockets_statistics_entries', function (Blueprint $table) {
+            // $table->renameColumn('peak_connection_count', 'peak_connections_count');
+            DB::statement('ALTER TABLE `websockets_statistics_entries` CHANGE
+             `peak_connection_count` `peak_connections_count` INT UNSIGNED');
+
+        });
+        Schema::table('websockets_statistics_entries', function (Blueprint $table) {
+            // $table->renameColumn('websocket_message_count', 'websocket_messages_count');
+
+            DB::statement('ALTER TABLE `websockets_statistics_entries` CHANGE
+             `websocket_message_count` `websocket_messages_count` INT UNSIGNED');
+        });
+        Schema::table('websockets_statistics_entries', function (Blueprint $table) {
+            // $table->renameColumn('api_message_count', 'api_messages_count');
+            DB::statement('ALTER TABLE `websockets_statistics_entries` CHANGE
+             `api_message_count` `api_messages_count` INT UNSIGNED');
+            
+        });
+
+===========
+php artisan migrate
+
+php artisan vendor:publish --provider="BeyondCode\LaravelWebSockets\WebSocketsServiceProvider" --tag="config"
+
+
+==========.env=========
+
+BROADCAST_DRIVER=pusher
+PUSHER_APP_ID=TestAPP
+PUSHER_APP_KEY=TESTAPP
+PUSHER_APP_SECRET=TESTAPP
+PUSHER_APP_CLUSTER=mt1
+===========config/broadcast.php
+
+ 'options' => [
+                'cluster' => env('PUSHER_APP_CLUSTER'),
+                'useTLS' => false,
+                'encrypted'=>false,
+                'host'=>"127.0.0.1",
+                'port'=>6001,
+                'scheme'=>'http'
+            ],
+================config/app.php`======
+            تفعيل
+App\Providers\BroadcastServiceProvider::class,
+
+
+
+
+composer require pusher/pusher-php-server "~3.0"
+
+php artisan optimzie
+php artisan optimzie:clear
+php artisan config:clear
+
+
+php artisan make:event NewTrade
+
+composer require -w pusher/pusher-php-server:7.0.2
+
+
+
+
+npm i --save-dev laravel-echo pusher-js
+
+
+npm i && npm run dev
+10:40
+
+وقفنا في خلل في  npm i --save-dev laravel-echo pusher-js
+
+
+
+
+===========public channel==========
+App\Events\Event.php
+  public function broadcastOn()
+    {
+        return new Channel('events');
+    }
+
+    .blade
+    
+    window.Echo.channel("events").listen('Event',(e)=>alert('The Event '+e.message))
+    
+
+=====private channel============
+route/channel.php
+
+Broadcast::channel('events',function($user){
+return true;
+});
+//blade
+    window.Echo.private("events").listen('TestEvent',(e)=>alert('The Event '+e.message))
+
+==========notifiactions=============
+php artisan make:notification RealTimeMessageNotification
+لازم تخلي اشعار يدعم
+implements ShouldBroadcast 
+ public function via($notifiable)
+    {
+        return ['broadcast'];
+    }
+
+    
+    public function toBroadcast($notifiable){
+        return new BroadcastMessage([
+            'message'=>$this->message." (User) =" .$notifiable->name,
+        ]);
+    }
+
+
+    بدك تعمل route يستدعي notification
+    Route::get('/send-notification',function(){
+$user=User::first();
+$user->notify((new RealTimeMessageNotification("hello this message from ")));
+return 'Notification send';
+});
+اضهاره للمستخدم في blade
+    window.Echo.private("App.Models.User.1").notification((notification)=>{
+        alert(notification.message)
+    })
+    ===========ارسال اشعار لمستخدم معين
+   ======= TestEvent==========
+      public $id;
+
+    public function __construct($message,$id)
+    {
+        $this->message=$message;
+        $this->id=$id;
+        //
+    }
+        public function broadcastOn()
+    {
+        return new PrivateChannel('events.'.$this->id);
+    }
+
+  =====  welcome.blade.php=======
+    <meta name="userId" content="{{auth()->id()??""}}">
+
+
+    let userId=document.getElementsByName("userId")[0]['content'];
+    window.Echo.private("events."+userId).listen('TestEvent',(e)=>alert('The Event '+e.message +" for you"))
+    
+
+============channel.php=======
+
+Broadcast::channel('events.{id}',function($user,$id){
+return (int) $user->id==(int) $id;
+});
+=====tinker=======
+
+event(new App\Events\TestEvent("test",1))
